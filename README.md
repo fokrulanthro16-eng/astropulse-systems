@@ -1,8 +1,10 @@
 # AstroPulse Systems 🛰️⚡
 ### Autonomous Bio-Telemetry & Edge Clinical Resilience Cockpit for Deep Space Missions
 
+[![Live Cockpit](https://img.shields.io/badge/Live%20Cockpit-frontend--alpha--pied--13.vercel.app-00df8f.svg?logo=vercel&logoColor=white&style=for-the-badge)](https://frontend-alpha-pied-13.vercel.app)
+[![YouTube Demo](https://img.shields.io/badge/YouTube-Watch%20Demo%20Video-FF0000.svg?logo=youtube&logoColor=white&style=for-the-badge)](https://youtu.be/062MgB7htsk)
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-Vercel%20Production-brightgreen?logo=vercel&logoColor=white)](https://frontend-alpha-pied-13.vercel.app)
 [![Python: 3.11+](https://img.shields.io/badge/Python-3.11%2B-blue.svg?logo=python&logoColor=white)](https://www.python.org/)
 [![Next.js: 16](https://img.shields.io/badge/Next.js-16%20(Turbopack)-black.svg?logo=next.js&logoColor=white)](https://nextjs.org/)
 [![FastAPI: 0.115+](https://img.shields.io/badge/FastAPI-0.115%2B-009688.svg?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
@@ -12,21 +14,23 @@
 
 ---
 
-## 🌐 Live Public Cockpit Deployment
-
-🚀 **Launch AstroPulse Systems in Your Browser**:  
-**[https://frontend-alpha-pied-13.vercel.app](https://frontend-alpha-pied-13.vercel.app)**
-
-> *Engineered with an autonomous on-device Edge simulation engine. When deployed standalone, AstroPulse immediately streams real-time 1Hz bio-telemetry, handles astronaut baseline switching, simulates acute flight hypoxia, executes NASA clinical SOP checklists, and triggers dynamic closed-loop recovery with zero cloud dependencies.*
-
----
-
 ## 📺 Project Demo Video
 
 [![AstroPulse Systems Video Presentation](https://img.youtube.com/vi/062MgB7htsk/maxresdefault.jpg)](https://youtu.be/062MgB7htsk)
 
 > 🎬 **Watch the Full Presentation & Live Cockpit Demo on YouTube**: [https://youtu.be/062MgB7htsk](https://youtu.be/062MgB7htsk)  
 > *A high-definition walkthrough demonstrating real-time synthetic biometric streaming, on-device Edge ML anomaly isolation, NASA clinical SOP countermeasures, automated closed-loop recovery, and 30-day microgravity degradation analytics.*
+
+---
+
+## 🚀 Live Interactive Cockpit Demo
+
+[![Deploy on Vercel](https://img.shields.io/badge/Vercel-Live%20Production%20Deployment-black?style=for-the-badge&logo=vercel)](https://frontend-alpha-pied-13.vercel.app)
+
+🔗 **Launch the Live Cockpit UI**:  
+### 👉 **[https://frontend-alpha-pied-13.vercel.app](https://frontend-alpha-pied-13.vercel.app)**
+
+> ⚡ **Autonomous Standalone Edge Mode**: AstroPulse Systems runs an on-device synthetic biometrics engine with real-time 1Hz streaming directly in your browser. You can switch crew members, trigger an acute in-flight hypoxia crisis, execute NASA clinical SOP checklists, and verify automated closed-loop recovery—**100% serverless with zero cloud dependencies.**
 
 ---
 
