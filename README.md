@@ -69,34 +69,34 @@ Includes a live `POST /api/vitals/ingest` endpoint for physical wearables, smart
 
 ```mermaid
 flowchart TD
-    subgraph Spacecraft Hardware / Node Compute
-        subgraph Data Acquisition & Ingestion
-            SYNTH[Synthetic Biometric Engine\nPhysiological Latency Simulator]
-            IOT[External Hardware Wearables\nPOST /api/vitals/ingest]
+    subgraph NODE_COMPUTE ["Spacecraft Hardware / Flight Compute"]
+        subgraph INGESTION ["Data Acquisition & Ingestion"]
+            SYNTH["Synthetic Biometric Engine: Physiological Latency Simulator"]
+            IOT["External Hardware Wearables: POST /api/vitals/ingest"]
         end
 
-        subgraph Core Telemetry Backend [FastAPI Local Daemon :8000]
-            BUF[Rolling 1-Hour Blackbox Buffer\nDownlink Export JSON / CSV]
-            CONFIG[Astronaut Baseline Profiles\nVance / Chen / Rostova]
+        subgraph BACKEND ["Core Telemetry Backend (FastAPI Local Daemon :8000)"]
+            BUF["Rolling 1-Hour Blackbox Buffer: Downlink Export JSON / CSV"]
+            CONFIG["Astronaut Baseline Profiles: Vance / Chen / Rostova"]
             
-            subgraph Dual-Layer Anomaly Detection
-                RULES[Layer 1: NASA-STD-3001 Rules\n+ Rolling Z-Score Ring Buffers]
-                ML[Layer 2: Edge ML Isolation Forest\nMultivariate Vector Scoring]
+            subgraph DETECTION ["Dual-Layer Anomaly Detection"]
+                RULES["Layer 1: NASA-STD-3001 Rules, Rolling Z-Score Ring Buffers"]
+                ML["Layer 2: Edge ML Isolation Forest, Multivariate Scoring"]
             end
             
-            RECOVERY[Dynamic Closed-Loop Recovery Engine\n15-Second S-Curve Physiological Trajectory]
-            WS[WebSocket Telemetry Broadcaster\nws://localhost:8000/ws/telemetry @ 1Hz]
+            RECOVERY["Dynamic Closed-Loop Recovery Engine: 15s S-Curve Trajectory"]
+            WS["WebSocket Telemetry Broadcaster: ws://localhost:8000/ws/telemetry @ 1Hz"]
         end
     end
 
-    subgraph Cockpit UI [Next.js 16 + Tailwind CSS :3000]
-        HEADER[Cockpit Header\nMission Clock | Edge ML Pill | Blackbox Export]
-        CREW[Crew Manifest Selector\nAdaptive Hemodynamic Profiles]
-        BANNER[Grandma Theory Alert Banner\nHigh Contrast | Failure Vector Attribution]
-        GAUGES[Neon Biometric Gauges\nPersonalized Alert Bands & Warnings]
-        CHARTS[Real-Time Recharts Waves\n1Hz Sliding Window Multi-Vector Graphs]
-        DRAWER[Clinical Flight Medicine Drawer\nNASA SOP Checklists & Auto-Recovery]
-        ANALYTICS[30-Day Exposure Analytics\nBMD Bone Loss & Radiation Dosimeter]
+    subgraph COCKPIT ["Cockpit UI (Next.js 16 + Tailwind CSS :3000)"]
+        HEADER["Cockpit Header: Mission Clock, Edge ML Pill, Blackbox Export"]
+        CREW["Crew Manifest Selector: Adaptive Hemodynamic Profiles"]
+        BANNER["Grandma Theory Alert Banner: High Contrast, Vector Attribution"]
+        GAUGES["Neon Biometric Gauges: Personalized Alert Bands & Warnings"]
+        CHARTS["Real-Time Recharts Waves: 1Hz Sliding Window Multi-Vector Graphs"]
+        DRAWER["Clinical Flight Medicine Drawer: NASA SOP Checklists & Auto-Recovery"]
+        ANALYTICS["30-Day Exposure Analytics: BMD Bone Loss & Radiation Dosimeter"]
     end
 
     SYNTH --> BUF
@@ -107,7 +107,10 @@ flowchart TD
     RULES --> WS
     ML --> WS
     RECOVERY --> BUF
-    WS --> Cockpit UI
+    WS --> HEADER
+    WS --> CREW
+    WS --> GAUGES
+    WS --> CHARTS
     DRAWER -.->|Automated Trigger| RECOVERY
 ```
 
@@ -117,17 +120,17 @@ flowchart TD
 
 | 1. Nominal Cockpit Baseline | 2. Acute In-Flight Crisis Alert |
 | :---: | :---: |
-| ![Nominal State](docs/screenshots/01_nominal_cockpit.png) | ![Crisis Alert](docs/screenshots/02_crisis_hypoxia_alert.png) |
+| ![Nominal Cockpit](docs/screenshots/01_nominal_cockpit.png) | ![Crisis Alert](docs/screenshots/02_crisis_hypoxia_alert.png) |
 | *Sarah Vance nominal envelope with 1Hz streaming and green status.* | *Critical Hypoxia emergency alert, Edge ML 81.2% confidence, SpO2 wave plunge.* |
 
 | 3. NASA Clinical SOP Drawer | 4. Personalized Athletic Baseline (Mark Chen) |
 | :---: | :---: |
-| ![SOP Drawer](docs/screenshots/03_emergency_sop_drawer.png) | ![Mark Chen](docs/screenshots/04_personalized_crew_switch.png) |
+| ![SOP Drawer](docs/screenshots/03_emergency_sop_drawer.png) | ![Athletic Baseline](docs/screenshots/04_personalized_crew_switch.png) |
 | *NASA Flight Medicine directives with interactive checkboxes & mitigation progress.* | *EVA Specialist athletic baseline (HR 54 bpm, HRV 72 ms, 46–78 bpm envelope).* |
 
 | 5. 30-Day Microgravity Degradation Analytics | 6. Blackbox Telemetry Downlink Menu |
 | :---: | :---: |
-| ![Exposure Analytics](docs/screenshots/05_long_term_exposure_analytics.png) | ![Blackbox Export](docs/screenshots/06_blackbox_export_menu.png) |
+| ![Microgravity Analytics](docs/screenshots/05_long_term_exposure_analytics.png) | ![Blackbox Export](docs/screenshots/06_blackbox_export_menu.png) |
 | *Bone demineralization loss (-1.2%/mo vs ARED) and cosmic radiation dosimeter.* | *1-hour rolling buffer export in JSON / CSV for deferred Ground Control sync.* |
 
 ---
