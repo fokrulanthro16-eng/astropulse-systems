@@ -2,12 +2,22 @@
 ### Autonomous Bio-Telemetry & Edge Clinical Resilience Cockpit for Deep Space Missions
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Vercel%20Production-brightgreen?logo=vercel&logoColor=white)](https://frontend-alpha-pied-13.vercel.app)
 [![Python: 3.11+](https://img.shields.io/badge/Python-3.11%2B-blue.svg?logo=python&logoColor=white)](https://www.python.org/)
 [![Next.js: 16](https://img.shields.io/badge/Next.js-16%20(Turbopack)-black.svg?logo=next.js&logoColor=white)](https://nextjs.org/)
 [![FastAPI: 0.115+](https://img.shields.io/badge/FastAPI-0.115%2B-009688.svg?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![Architecture: Zero-Cloud / Offline Edge](https://img.shields.io/badge/Compute-Zero--Cloud%20%2F%20Offline%20Edge-success.svg)](#zero-cloud-edge-architecture)
 [![NASA Standard: NASA-STD-3001](https://img.shields.io/badge/NASA%20Standard-NASA--STD--3001%20Compliant-red.svg?logo=nasa&logoColor=white)](#nasa-standards--clinical-parameters)
 [![Challenge: NASA Space Apps 2026](https://img.shields.io/badge/NASA%20Space%20Apps-Challenge%202026-orange.svg)](#nasa-space-apps-challenge-2026)
+
+---
+
+## 🌐 Live Public Cockpit Deployment
+
+🚀 **Launch AstroPulse Systems in Your Browser**:  
+**[https://frontend-alpha-pied-13.vercel.app](https://frontend-alpha-pied-13.vercel.app)**
+
+> *Engineered with an autonomous on-device Edge simulation engine. When deployed standalone, AstroPulse immediately streams real-time 1Hz bio-telemetry, handles astronaut baseline switching, simulates acute flight hypoxia, executes NASA clinical SOP checklists, and triggers dynamic closed-loop recovery with zero cloud dependencies.*
 
 ---
 

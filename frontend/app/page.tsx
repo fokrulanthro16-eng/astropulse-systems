@@ -18,6 +18,7 @@ import {
   SimulationMode 
 } from "@/lib/types";
 import { cockpitAudio } from "@/lib/audio";
+import { standaloneEngine } from "@/lib/standaloneEngine";
 import { Shield, Radio, Terminal, AlertOctagon, Zap, Database, Bluetooth, Dna } from "lucide-react";
 
 const BACKEND_HTTP = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
@@ -37,6 +38,75 @@ export default function AstroPulseDashboard() {
 
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const standaloneIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const isWsActiveRef = useRef<boolean>(false);
+
+  // Unified telemetry frame processor
+  const processTelemetryPacket = useCallback((activePacket: TelemetryPacket, crewList?: CrewOverviewItem[]) => {
+    setTelemetry(activePacket);
+    if (crewList && crewList.length > 0) {
+      setCrewOverview(crewList);
+    }
+
+    // Append to rolling chart history (keep last 40 seconds)
+    const dateObj = new Date(activePacket.timestamp);
+    const timeStr = dateObj.toLocaleTimeString("en-US", {
+      hour12: false,
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    });
+
+    const newPoint: ChartDataPoint = {
+      timeStr,
+      timestamp: dateObj.getTime(),
+      heartRate: activePacket.vitals.heart_rate,
+      spo2: activePacket.vitals.spo2,
+      hrv: activePacket.vitals.hrv_rmssd,
+      cabinCo2: activePacket.vitals.cabin_co2,
+    };
+
+    setChartHistory((prev) => {
+      const next = [...prev, newPoint];
+      return next.length > 40 ? next.slice(next.length - 40) : next;
+    });
+
+    // Audio Feedback
+    if (activePacket.overall_status === "CRITICAL") {
+      cockpitAudio.playCriticalKlaxon();
+    } else if (activePacket.overall_status === "WARNING") {
+      cockpitAudio.playWarningAlert();
+    } else {
+      cockpitAudio.playNominalPulse();
+    }
+  }, []);
+
+  // Activate client-side standalone simulation engine fallback
+  const startStandaloneFallback = useCallback(() => {
+    if (isWsActiveRef.current) return;
+    if (standaloneIntervalRef.current) return;
+
+    // Immediately emit an initial frame
+    const initial = standaloneEngine.tick(selectedAstronautId);
+    processTelemetryPacket(initial.active_astronaut, initial.crew_overview);
+    setSimulationStatus(standaloneEngine.getSimulationStatus());
+    setIsConnected(true);
+
+    // Stream 1Hz local synthetic telemetry
+    standaloneIntervalRef.current = setInterval(() => {
+      if (isWsActiveRef.current) {
+        if (standaloneIntervalRef.current) {
+          clearInterval(standaloneIntervalRef.current);
+          standaloneIntervalRef.current = null;
+        }
+        return;
+      }
+      const tickData = standaloneEngine.tick(selectedAstronautId);
+      processTelemetryPacket(tickData.active_astronaut, tickData.crew_overview);
+      setSimulationStatus(standaloneEngine.getSimulationStatus());
+      setIsConnected(true);
+    }, 1000);
+  }, [selectedAstronautId, processTelemetryPacket]);
 
   // Fetch initial simulation status
   const fetchSimulationStatus = useCallback(async () => {
@@ -45,107 +115,92 @@ export default function AstroPulseDashboard() {
       if (res.ok) {
         const data = await res.json();
         setSimulationStatus(data);
+      } else {
+        setSimulationStatus(standaloneEngine.getSimulationStatus());
       }
     } catch {
-      // Backend starting up
+      setSimulationStatus(standaloneEngine.getSimulationStatus());
     }
   }, []);
 
-  // WebSocket Telemetry Connection
+  // WebSocket Telemetry Connection with Seamless Standalone Fallback
   useEffect(() => {
     fetchSimulationStatus();
 
     let isMounted = true;
-    console.log("[AstroPulse] Effect mounted for astronaut:", selectedAstronautId);
+    let fallbackTimeout: NodeJS.Timeout | null = null;
 
     function connectWs() {
       if (!isMounted) return;
 
-      const wsUrl = `${BACKEND_WS}?astronaut_id=${selectedAstronautId}`;
-      console.log("[AstroPulse] Creating WebSocket connection to:", wsUrl);
-      const ws = new WebSocket(wsUrl);
-      wsRef.current = ws;
+      try {
+        const wsUrl = `${BACKEND_WS}?astronaut_id=${selectedAstronautId}`;
+        const ws = new WebSocket(wsUrl);
+        wsRef.current = ws;
 
-      ws.onopen = () => {
-        console.log("[AstroPulse] WebSocket ONOPEN!");
-        if (!isMounted) return;
-        setIsConnected(true);
-      };
-
-      ws.onmessage = (event) => {
-        if (!isMounted) return;
-        try {
-          const envelope = JSON.parse(event.data);
-          if (envelope.type === "TELEMETRY_UPDATE") {
-            const activePacket: TelemetryPacket = envelope.active_astronaut;
-            setTelemetry(activePacket);
-
-            if (envelope.crew_overview) {
-              setCrewOverview(envelope.crew_overview);
-            }
-
-            // Append to rolling chart history (keep last 40 seconds)
-            const dateObj = new Date(activePacket.timestamp);
-            const timeStr = dateObj.toLocaleTimeString("en-US", {
-              hour12: false,
-              hour: "2-digit",
-              minute: "2-digit",
-              second: "2-digit",
-            });
-
-            const newPoint: ChartDataPoint = {
-              timeStr,
-              timestamp: dateObj.getTime(),
-              heartRate: activePacket.vitals.heart_rate,
-              spo2: activePacket.vitals.spo2,
-              hrv: activePacket.vitals.hrv_rmssd,
-              cabinCo2: activePacket.vitals.cabin_co2,
-            };
-
-            setChartHistory((prev) => {
-              const next = [...prev, newPoint];
-              return next.length > 40 ? next.slice(next.length - 40) : next;
-            });
-
-            // Trigger Audio Feedback
-            if (activePacket.overall_status === "CRITICAL") {
-              cockpitAudio.playCriticalKlaxon();
-            } else if (activePacket.overall_status === "WARNING") {
-              cockpitAudio.playWarningAlert();
-            } else {
-              cockpitAudio.playNominalPulse();
-            }
+        // If WS doesn't establish within 1.5 seconds (e.g. deployed on Vercel), engage standalone mode
+        fallbackTimeout = setTimeout(() => {
+          if (!isWsActiveRef.current && isMounted) {
+            startStandaloneFallback();
           }
-        } catch (err) {
-          console.error("Telemetry parsing error:", err);
-        }
-      };
+        }, 1500);
 
-      ws.onclose = (event) => {
-        console.log("[AstroPulse] WebSocket ONCLOSE! Code:", event.code, "isMounted:", isMounted);
-        if (!isMounted) return;
-        setIsConnected(false);
-        reconnectTimerRef.current = setTimeout(connectWs, 2000);
-      };
+        ws.onopen = () => {
+          if (!isMounted) return;
+          isWsActiveRef.current = true;
+          if (standaloneIntervalRef.current) {
+            clearInterval(standaloneIntervalRef.current);
+            standaloneIntervalRef.current = null;
+          }
+          setIsConnected(true);
+        };
 
-      ws.onerror = (err) => {
-        console.log("[AstroPulse] WebSocket ONERROR!", err);
-        ws.close();
-      };
+        ws.onmessage = (event) => {
+          if (!isMounted) return;
+          try {
+            const envelope = JSON.parse(event.data);
+            if (envelope.type === "TELEMETRY_UPDATE") {
+              processTelemetryPacket(envelope.active_astronaut, envelope.crew_overview);
+            }
+          } catch (err) {
+            console.error("Telemetry parsing error:", err);
+          }
+        };
+
+        ws.onclose = () => {
+          if (!isMounted) return;
+          isWsActiveRef.current = false;
+          // Trigger standalone streaming seamlessly on disconnect
+          startStandaloneFallback();
+          reconnectTimerRef.current = setTimeout(connectWs, 3000);
+        };
+
+        ws.onerror = () => {
+          isWsActiveRef.current = false;
+          startStandaloneFallback();
+          ws.close();
+        };
+      } catch {
+        startStandaloneFallback();
+      }
     }
 
     connectWs();
 
     return () => {
-      console.log("[AstroPulse] Effect cleanup!");
       isMounted = false;
+      if (fallbackTimeout) clearTimeout(fallbackTimeout);
       if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+      if (standaloneIntervalRef.current) {
+        clearInterval(standaloneIntervalRef.current);
+        standaloneIntervalRef.current = null;
+      }
       if (wsRef.current) {
         wsRef.current.close();
         wsRef.current = null;
       }
     };
-  }, [selectedAstronautId, fetchSimulationStatus]);
+  }, [selectedAstronautId, fetchSimulationStatus, startStandaloneFallback, processTelemetryPacket]);
 
   // Switch astronaut
   const handleSelectAstronaut = (astroId: string) => {
@@ -158,6 +213,10 @@ export default function AstroPulseDashboard() {
           astronaut_id: astroId,
         })
       );
+    } else {
+      // In standalone mode, update immediately
+      const tickData = standaloneEngine.tick(astroId);
+      processTelemetryPacket(tickData.active_astronaut, tickData.crew_overview);
     }
   };
 
@@ -167,32 +226,42 @@ export default function AstroPulseDashboard() {
     setIsAudioMuted(muted);
   };
 
-  // Trigger Crisis Scenario via API
+  // Trigger Crisis Scenario
   const handleTriggerScenario = async (
     mode: SimulationMode,
     overrides?: { spo2?: number; hr?: number; co2?: number }
   ) => {
-    try {
-      const body: Record<string, unknown> = {
-        mode,
-        astronaut_id: selectedAstronautId,
-      };
-      if (overrides?.spo2) body.custom_spo2_target = overrides.spo2;
-      if (overrides?.hr) body.custom_hr_target = overrides.hr;
-      if (overrides?.co2) body.custom_co2_override = overrides.co2;
+    // If backend is active, dispatch to backend
+    if (isWsActiveRef.current) {
+      try {
+        const body: Record<string, unknown> = {
+          mode,
+          astronaut_id: selectedAstronautId,
+        };
+        if (overrides?.spo2) body.custom_spo2_target = overrides.spo2;
+        if (overrides?.hr) body.custom_hr_target = overrides.hr;
+        if (overrides?.co2) body.custom_co2_override = overrides.co2;
 
-      const res = await fetch(`${BACKEND_HTTP}/api/simulate/crisis`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setSimulationStatus(data);
+        const res = await fetch(`${BACKEND_HTTP}/api/simulate/crisis`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setSimulationStatus(data);
+          return;
+        }
+      } catch {
+        // Fallback to standalone below
       }
-    } catch (err) {
-      console.error("Crisis simulation trigger failed:", err);
     }
+
+    // Standalone fallback
+    standaloneEngine.triggerCrisis(mode);
+    setSimulationStatus(standaloneEngine.getSimulationStatus());
+    const tickData = standaloneEngine.tick(selectedAstronautId);
+    processTelemetryPacket(tickData.active_astronaut, tickData.crew_overview);
   };
 
   // Quick Crisis Toggle Button
@@ -204,32 +273,50 @@ export default function AstroPulseDashboard() {
 
   // Trigger Automated Closed-Loop Clinical Recovery (15s trajectory)
   const handleTriggerClosedLoopRecovery = async () => {
-    try {
-      const res = await fetch(`${BACKEND_HTTP}/api/simulate/recover`, {
-        method: "POST",
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setSimulationStatus(data);
+    if (isWsActiveRef.current) {
+      try {
+        const res = await fetch(`${BACKEND_HTTP}/api/simulate/recover`, {
+          method: "POST",
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setSimulationStatus(data);
+          return;
+        }
+      } catch {
+        // Fallback to standalone below
       }
-    } catch (err) {
-      console.error("Closed-loop recovery trigger failed:", err);
     }
+
+    // Standalone fallback
+    standaloneEngine.triggerRecovery();
+    setSimulationStatus(standaloneEngine.getSimulationStatus());
+    const tickData = standaloneEngine.tick(selectedAstronautId);
+    processTelemetryPacket(tickData.active_astronaut, tickData.crew_overview);
   };
 
   // Reset Simulation
   const handleResetSimulation = async () => {
-    try {
-      const res = await fetch(`${BACKEND_HTTP}/api/simulate/reset`, {
-        method: "POST",
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setSimulationStatus(data);
+    if (isWsActiveRef.current) {
+      try {
+        const res = await fetch(`${BACKEND_HTTP}/api/simulate/reset`, {
+          method: "POST",
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setSimulationStatus(data);
+          return;
+        }
+      } catch {
+        // Fallback to standalone below
       }
-    } catch (err) {
-      console.error("Simulation reset failed:", err);
     }
+
+    // Standalone fallback
+    standaloneEngine.resetSimulation();
+    setSimulationStatus(standaloneEngine.getSimulationStatus());
+    const tickData = standaloneEngine.tick(selectedAstronautId);
+    processTelemetryPacket(tickData.active_astronaut, tickData.crew_overview);
   };
 
   // Export Blackbox Telemetry Downlink (.JSON / .CSV)
